@@ -55,11 +55,17 @@ public class Inicio {
 			}
 
 			for (int i = 0; i < errores.size(); i++) {
-
 				String solucions = "" + erroresDB.get(errores.get(i).getError());
-				String descr = "/* \n" + errores.get(i).getError() + " --- " + errores.get(i).getDescrpcion() + " "
-						+ errores.get(i).getObjeto() + "." + errores.get(i).getAtributo() + "\n */";
-				String consulta = String.format(solucions, errores.get(i).getObjeto(), errores.get(i).getAtributo());
+				String descr = "/* \n" + errores.get(i).getError() + " --- " + errores.get(i).getDescrpcion() + "\n */";
+
+				String[] parametros = errores.get(i).getParametros().split(" ");
+				String consulta = "";
+				if (parametros.length == 2) {
+					consulta = String.format(solucions, parametros[0], parametros[1]);
+				} else if (parametros.length == 4) {
+					consulta = String.format(solucions, parametros[0], parametros[1], parametros[3], parametros[2]);
+				}
+
 				if (!solucions.trim().equals("null")) {
 					consultas.add(descr);
 					consultas.add(consulta);
@@ -104,14 +110,15 @@ public class Inicio {
 	static ArrayList<Error> prepararTXT(String archivo) throws FileNotFoundException, IOException {
 		String cadena;
 		// Exp Regulares
-		Pattern patternError = Pattern.compile("^BMXAA[0-9]{4}E -- Error - BMXAA[0-9]{4}E*$", Pattern.CASE_INSENSITIVE);
-		Pattern patternErrorP = Pattern.compile("^BMXAA[0-9]{4}E$", Pattern.CASE_INSENSITIVE);
-		Pattern patternError2 = Pattern.compile("^BMXAA[0-9]{4}E -- Error - configure#NoAutoKeyName*$",
+		Pattern patternError = Pattern.compile("^BMXAA[0-9]{4}E -- Error - BMXAA[0-9]{4}E", Pattern.CASE_INSENSITIVE);
+		Pattern patternError4 = Pattern.compile("^BMXAA0443E -- Error - BMXAA0497E", Pattern.CASE_INSENSITIVE);
+		Pattern patternErrorP = Pattern.compile("^BMXAA[0-9]{4}E", Pattern.CASE_INSENSITIVE);
+		Pattern patternErrorNoAutoKeyName = Pattern.compile("^BMXAA[0-9]{4}E -- Error - configure#NoAutoKeyName",
 				Pattern.CASE_INSENSITIVE);
-		Pattern patternError3 = Pattern.compile("^BMXAA[0-9]{4}E -- Error - configure#SeqNameNull*$",
+		Pattern patternErrorSeqNameNull = Pattern.compile("^BMXAA[0-9]{4}E -- Error - configure#SeqNameNull",
 				Pattern.CASE_INSENSITIVE);
-		Pattern patternWar = Pattern.compile("^BMXAA[0-9]{4}W*$", Pattern.CASE_INSENSITIVE);
-		Pattern patternInfo = Pattern.compile("^BMXAA[0-9]{4}I*$", Pattern.CASE_INSENSITIVE);
+		Pattern patternWar = Pattern.compile("^BMXAA[0-9]{4}W", Pattern.CASE_INSENSITIVE);
+		Pattern patternInfo = Pattern.compile("^BMXAA[0-9]{4}I", Pattern.CASE_INSENSITIVE);
 
 		ArrayList<Error> lista = new ArrayList<>();
 
@@ -122,56 +129,83 @@ public class Inicio {
 		FileOutputStream fos = new FileOutputStream("d:/errores.txt");
 		OutputStreamWriter isw = new OutputStreamWriter(fos, "utf8");
 		BufferedWriter bw = new BufferedWriter(isw);
-		
+
 		FileOutputStream fos2 = new FileOutputStream("d:/total.txt");
 		OutputStreamWriter isw2 = new OutputStreamWriter(fos2, "utf8");
 		BufferedWriter bw2 = new BufferedWriter(isw2);
 
-		while ((cadena = br.readLine()) != null) {
-			cadena = cadena.trim();
-			bw2.write(cadena + "\n");
+		String cadena1 = "";
+		String cadena2 = "";
+
+		ArrayList<String> ficherocompleto = new ArrayList<>();
+		while ((cadena1 = br.readLine()) != null) {
+			ficherocompleto.add(cadena1.trim());
 		}
-		
-		
-		
-		while ((cadena = br.readLine()) != null) {
-			cadena = cadena.trim();
-			bw2.write(cadena + "\n");
-			
-			
-			
+
+		for (int i = 0; i < ficherocompleto.size() - 2; i++) {
+			cadena = ficherocompleto.get(i);
+			// bw2.write(cadena + "\n");
 			if (esErrorP(cadena, patternErrorP)) {
 				String errorMain = "";
 				String Desc = "";
-				if (esError(cadena, patternError)) {
+				cadena2 = ficherocompleto.get(i + 1);
+				if (esError(cadena, patternError4)) {
 					errorMain = cadena.substring(0, 32);
-					Desc = cadena.substring(32, cadena.length());
-				} else if (esError2(cadena, patternError2)) {
+					Desc = cadena.substring(32, cadena.length()) + "\n" + cadena2;
+					String at = "";
+					at += cadena2.split(" ")[0].split("[.]")[0] + " ";// o
+					at += cadena2.split(" ")[0].split("[.]")[1] + " ";// a
+					int val = Integer.parseInt(cadena2.split("\\(")[1].split("\\)")[0].split("[.]")[0]);// 50
+					int val2 = Integer.parseInt(cadena2.split("\\(")[1].split("\\)")[0].split("[.]")[0]);// 30
+					if (val > val2) {
+						at += val + " ";
+					} else {
+						at += val2 + " ";
+					}
+					at += cadena2.split(" ")[4].split("[.]")[0];// o
+					String atributos = at;
+					atributos = atributos.replace(".", " ");
+					bw.write(errorMain + "---" + atributos + "\n");
+					Error obj = new Error(errorMain, Desc, atributos);
+					lista.add(obj);
+
+				} else if (esError(cadena, patternError)) {
+					errorMain = cadena.substring(0, 32);
+					Desc = cadena.substring(32, cadena.length()) + "\n" + cadena2;
+					while (!esErrorP(cadena2, patternErrorP) && !esError(cadena2, patternError)
+							&& !esInfo(cadena2, patternInfo) && !esWar(cadena2, patternWar)
+							&& !esError2(cadena2, patternErrorNoAutoKeyName)
+							&& !esError3(cadena2, patternErrorSeqNameNull)) {
+						i++;
+						String atributos = cadena2.split(" ")[0];
+						atributos = atributos.replace(".", " ");
+						bw.write(errorMain + "---" + atributos + "\n");
+						Error obj = new Error(errorMain, Desc, atributos);
+						lista.add(obj);
+						cadena2 = ficherocompleto.get(i + 1);
+					}
+				} else if (esError2(cadena, patternErrorNoAutoKeyName)) {
 					errorMain = cadena.substring(0, 45);
-					Desc = cadena.substring(45, cadena.length());
-				} else if (esError3(cadena, patternError3)) {
+					Desc = cadena.substring(45, cadena.length()) + "\n" + cadena2;
+					String atributos = cadena2.split(" ")[0];
+					atributos = atributos.replace(".", " ");
+					bw.write(errorMain + "---" + atributos + "\n");
+					Error obj = new Error(errorMain, Desc, atributos);
+					lista.add(obj);
+				} else if (esError3(cadena, patternErrorSeqNameNull)) {
 					errorMain = cadena.substring(0, 43);
-					Desc = cadena.substring(43, cadena.length());
+					Desc = cadena.substring(43, cadena.length()) + "\n" + cadena2;
+					String atributos = cadena2.split(" ")[0];
+					atributos = atributos.replace(".", " ");
+					bw.write(errorMain + "---" + atributos + "\n");
+					Error obj = new Error(errorMain, Desc, atributos);
+					lista.add(obj);
 				} else if (esInfo(cadena, patternInfo)) {
 					break;
 				} else if (esWar(cadena, patternWar)) {
 					break;
 				}
-				while ((cadena = br.readLine()) != null) {
-					if (esErrorP(cadena, patternErrorP) || esError(cadena, patternError) || esInfo(cadena, patternInfo)
-							|| esWar(cadena, patternWar) || esError2(cadena, patternError2)
-							|| esError3(cadena, patternError3))
-						break;
-					else {
-						String atributos = atributo(cadena);
-						if (atributos != null) {
-							bw.write(errorMain + "---" + atributos + "\n");
-							Error obj = crearObj(errorMain, Desc, atributos);
-							lista.add(obj);
-							System.out.println(errorMain);
-						}
-					}
-				}
+
 			}
 		}
 		bw.close();
@@ -192,30 +226,6 @@ public class Inicio {
 
 		});
 		return lista;
-	}
-	
-	
-	
-	
-
-	static void ImprimirObj(ArrayList<Error> lista) {
-		for (int i = 0; i < lista.size(); i++) {
-			Error error = lista.get(i);
-			System.out.println(error.getError() + " - " + error.getDescrpcion() + " - " + error.getObjeto() + " - "
-					+ error.getAtributo());
-		}
-	}
-
-	static boolean validar(String cadena, Pattern pa) {
-		String a = "";
-		if (cadena.length() > 9) {
-			a = cadena.trim().substring(0, 10);
-			System.out.println(a);
-		} else
-			return false;
-		if (pa.matcher(a).find())
-			return true;
-		return false;
 	}
 
 	static boolean esErrorP(String cadena, Pattern pa) {
@@ -309,13 +319,11 @@ public class Inicio {
 		if (aux.length > 1) {
 			auxE.setError(mainE);
 			auxE.setDescrpcion(Desc);
-			auxE.setObjeto(aux[0]);
-			auxE.setAtributo(aux[1]);
+			auxE.setParametros(aux[0]);
 		}
 		if (aux.length == 1) {
 			auxE.setError(mainE);
 			auxE.setDescrpcion(Desc);
-			auxE.setAtributo(aux[0]);
 		}
 		return auxE;
 	}

@@ -2,8 +2,7 @@
 public class Error {
 	String error;
 	String descrpcion;
-	String objeto;
-	String atributo;
+	String parametros;
 	public Error() {
 		super();
 	}
@@ -19,17 +18,18 @@ public class Error {
 	public void setDescrpcion(String descrpcion) {
 		this.descrpcion = descrpcion;
 	}
-	public String getObjeto() {
-		return objeto;
+	public String getParametros() {
+		return parametros;
 	}
-	public void setObjeto(String objeto) {
-		this.objeto = objeto;
+	public void setParametros(String objeto) {
+		this.parametros = objeto;
 	}
-	public String getAtributo() {
-		return atributo;
+	public Error(String error, String descrpcion, String parametros) {
+		super();
+		this.error = error;
+		this.descrpcion = descrpcion;
+		this.parametros = parametros;
 	}
-	public void setAtributo(String atributo) {
-		this.atributo = atributo;
-	}
+
 
 }
